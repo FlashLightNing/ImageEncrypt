@@ -68,10 +68,6 @@ public class client extends JFrame {
 	}
 
 	
-	private client() {
-	}
-
-
 	// @Override
 	// public void run() {
 	// while (true) {
@@ -105,6 +101,7 @@ public class client extends JFrame {
 			}
 			// 虽然数据类型不同，但JAVA会自动转换成相同数据类型后在做比较
 			if (sumL == l) {
+				System.out.println("长度="+l);
 				bool = true;
 			}
 		} catch (Exception e) {
@@ -122,6 +119,7 @@ public class client extends JFrame {
 			}
 		}
 		System.out.println(bool ? "成功" : "失败");
+		
 	}
 
 	
@@ -193,6 +191,7 @@ public class client extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				System.out.println("准备发送");
+				sendMsg(out, "start");
 				sendImage(socket, imgPath);
 				System.out.println("发送路径:" + imgPath);
 			}

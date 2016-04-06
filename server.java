@@ -40,23 +40,17 @@ public class server extends Thread {
 
 	private OutputStream out = null;
 	private InputStream in = null;
-	private BufferedReader bufferedReader;
-	private InputStreamReader inputStreamReader;
 	private Socket socket;
 	ServerSocket serverSocket = null;
 	JFrame jframe;
-	
-	
-
 
 	public static void main(String[] args) {
 		// String path = "G:/matlab/bin/original_color_image_1.jpg";
 		// String path2 = "E:/abc_gray.jpg";
 		// new Main().arnoldChange(path2);
-		
-		
+
 		server ma = new server();
-		 ma.systenUI();
+		ma.systenUI();
 
 		try {
 			ma.setServer(9090);
@@ -86,6 +80,21 @@ public class server extends Thread {
 		}
 	}
 
+	public boolean receiveMessage(InputStream in) {
+		BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+		try {
+			String text = reader.readLine();
+			if (text.equals("start")) {
+				System.out.println("收到start");
+				return true;
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return false;
+	}
+
 	public void receiveFile(Socket socket) {
 		byte[] inputByte = null;
 		int length = 0;
@@ -103,27 +112,32 @@ public class server extends Thread {
 				 */
 				int c = 0;
 				System.out.println("等待客户端选择文件");
-				File file=new File("E:/exist.txt");
-				if(!file.exists())
+				File file = new File("E:/exist.txt");
+
+				long now_time = System.currentTimeMillis();
+
 				while (true) {
 					c++;
-					if(file.exists())
+					// long cc =System.currentTimeMillis();
+					// if(cc-now_time ==60000)
+					if (receiveMessage(socket.getInputStream()))
 						break;
 				}
 				JOptionPane.showConfirmDialog(jframe, "一张图片等待接收...", "图片",
 						JOptionPane.YES_OPTION);
-				
-				String path =saveAs();
-				 fos = new FileOutputStream(new File(path));
+
+				String path = saveAs();
+				fos = new FileOutputStream(new File(path));
 				inputByte = new byte[1024];
 				System.out.println("开始接收数据...");
-				
+				int receLenth = 0;
 				while ((length = dis.read(inputByte, 0, inputByte.length)) > 0) {
-					
+
 					fos.write(inputByte, 0, length);
+					receLenth += length;
 					fos.flush();
 				}
-				System.out.println("完成接收：" + path);
+				System.out.println("完成接收：" + path + "," + receLenth);
 				file.delete();
 			} finally {
 				if (fos != null)
