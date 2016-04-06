@@ -85,23 +85,24 @@ public class ImageUtils {
 		// 4-彩色转黑白：
 		// String path = "E:/original_color_image_1.jpeg";
 		// String path2 = "E:/abc_gray.jpg";
-		String grayImage = "E://lena.jpg";
-		
+		String grayImage = "E://lena.tiff";
+
 		boolean is_Jpeg = getImageType(grayImage);
 		String outputPath = "E:/te.jpg";
 		if (!is_Jpeg) {
+			System.out.println("非JPEG转JPEG");
 			convertPicture(grayImage, outputPath, "JPEG");
 		}
-		
+		System.out.println("已为jpeg");
 		// ImageUtils.getGrayPicture(path,path3);
 
-		// String grayImagePath = "E:/b.jpg";
-		// ImageUtils.gray(path, grayImagePath);
+		 String grayImagePath = "E:/b.jpg";
+//		 ImageUtils.gray(path, grayImagePath);
 
 		// 猫脸映射之后得到的图片路径
 		String after_ArnoldChange_ImagePath = "E:/d.jpg";
 
-		double[][] a = ImageUtils.arnoldChange(grayImage,
+		double[][] a = ImageUtils.arnoldChange(outputPath,
 				after_ArnoldChange_ImagePath, 5, 15, 20);
 
 		// 混沌加密得到的图片路径
@@ -113,14 +114,14 @@ public class ImageUtils {
 		// double[][] br = ImageUtils.chaoticEncrypt(a,
 		// afterArnoldChangeImagePath, afterChaoticEncryptImagePath);
 
-		String dataPath = "E:/a.txt";
-
 		// 归一化
 		// Object[] params = ImageUtils.guiyihua(ar,
-		// afterChaoticEncryptImagePath,dataPath);
-
+		// after_ChaoticEncrypt_ImagePath);
+		//
 		// double[][] ar2 = ImageUtils.deGuiyihua((String) params[0],
-		// (double) params[1], (double) params[2]);
+		// (double) params[1], (double) params[2], (double[][]) params[3]);
+		//
+		// System.out.println(ImageUtils.juede(ar, ar2));
 
 		// // 混沌解密得到的图片途径
 		String after_De_ChaoticEncrypt_ImagePath = "E:/h.jpg";
@@ -165,20 +166,24 @@ public class ImageUtils {
 			stringBuilder.append(hv);
 		}
 		String number = stringBuilder.toString();
-		if (number.equals("ffd8ffe0")) {
+		System.out.println(number);
+		if (number.equals("ffd8")) {
 			return true;
 		}
 		return false;
 	}
 
-	/**将任意类型的转为JPEG类型的图片
+	/**
+	 * 将任意类型的转为JPEG类型的图片
+	 * 
 	 * @param inputPath
 	 * @param outputPath
 	 * @param type
+	 * @throws FileNotFoundException 
 	 * @throws IOException
 	 */
 	public static void convertPicture(String inputPath, String outputPath,
-			String type) throws IOException {
+			String type) throws FileNotFoundException  {
 
 		RenderedOp src2 = JAI.create("fileload", inputPath);
 		OutputStream os2 = new FileOutputStream(outputPath);
@@ -187,8 +192,13 @@ public class ImageUtils {
 		// 指定格式类型，jpg 属于 JPEG 类型
 		ImageEncoder enc2 = ImageCodec.createImageEncoder("JPEG", os2, param2);
 
-		enc2.encode(src2);
-		os2.close();
+		try {
+			enc2.encode(src2);
+			os2.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
 		System.out.println("转换成功");
 	}
 
@@ -271,8 +281,7 @@ public class ImageUtils {
 	 * @throws IOException
 	 */
 	public static double[][] arnoldChange(String grayPicPath,
-			String desPicPath, int arnoldChangeTimes, int aValue, int bValue)
-			throws IOException {
+			String desPicPath, int arnoldChangeTimes, int aValue, int bValue) {
 
 		int a = aValue;
 		int b = bValue;
@@ -403,6 +412,7 @@ public class ImageUtils {
 		System.out.println(process + ":数组转换图片成功,路径:" + path);
 	}
 
+	
 	public static Object[] changeImageToArray(String imgPath) {
 
 		int N = 0;
@@ -421,6 +431,9 @@ public class ImageUtils {
 
 					Color color = new Color(rgbArray[j * N + i]);
 					array[i][j] = color.getRed() / 255.0;
+					if (i == 1 && j == 1) {
+						System.out.println("rgb=" + array[1][1] * 255);
+					}
 				}
 
 		} catch (IOException e) {
@@ -491,7 +504,7 @@ public class ImageUtils {
 
 			}
 
-		System.out.println("max="+maxValue+",min="+minValue);
+		System.out.println("max=" + maxValue + ",min=" + minValue);
 		returnArray = afterChaoticEncrypt;
 
 		// changeArrayToImage(afterChaoticEncrypt, desPath,"混沌加密");
@@ -506,10 +519,9 @@ public class ImageUtils {
 	 *            混沌加密后的数组，因为其值大于1，所以不能直接生成图片，要先归一化
 	 * @param imgPath
 	 *            归一化生成的图片路径
-	 * @return obj[0]: 图片路径 ;obj[1]:最大值 obj[2]:最小值
+	 * @return obj[0]: 图片路径 ;obj[1]:最大值 obj[2]:最小值;obj[3]: 小数数组
 	 */
-	public static Object[] guiyihua(double[][] array, String imgPath,
-			String dataPath) {
+	public static Object[] guiyihua(double[][] array, String imgPath) {
 
 		double maxValue = 10;
 		double minValue = 10;
@@ -526,87 +538,51 @@ public class ImageUtils {
 			}
 
 		double cha = maxValue - minValue;
-		System.out.println("guiyi:" + cha + ",min=" + minValue + ",max="
+		System.out.println("guiyi:差=" + cha + ",min=" + minValue + ",max="
 				+ maxValue);
 
-		FileWriter fileWriter = null;
-		BufferedWriter bw = null;
-
-		File file = new File(dataPath);
-		if (!file.exists()) {
-			try {
-				file.createNewFile();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-
-		try {
-			fileWriter = new FileWriter(file.getAbsoluteFile());
-			bw = new BufferedWriter(fileWriter);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		double[][] xiaoshu = new double[N][N];
+		System.out.println("一开始:" + array[1][1]);
 
 		for (int i = 0; i < N; i++)
 			for (int j = 0; j < N; j++) {
 				double value = array[i][j];
 				double afterValue = (value - minValue) / cha;
-				// System.out.println(afterValue);
 				array[i][j] = afterValue;
+
 				double v = array[i][j] * 255;
-				String end = String.valueOf(v - (int) v);
-				try {
-					bw.write(end);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				double end = (v - (int) v);
+				xiaoshu[i][j] = end;
 			}
-		System.out.println("结束");
-		try {
-			bw.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		StringBuilder sb = new StringBuilder("");
-		for (int i = 0; i < N; i++)
-			for (int j = 0; j < N; j++) {
-				double temp = array[i][j];
-				double end = (temp * 255) - (int) (temp * 255);
-				sb.append(String.valueOf(end) + ",");
-			}
-
+		System.out.println("结束,");
+		System.out.println(array[1][1] + "," + xiaoshu[1][1]);
 		changeArrayToImage(array, imgPath, "归一化");
 
-		Object[] objects = new Object[] { imgPath, maxValue, minValue,
-				sb.toString() };
+		Object[] objects = new Object[] { imgPath, maxValue, minValue, xiaoshu };
 
 		return objects;
 
 	}
 
 	public static double[][] deGuiyihua(String imgPath, double maxValue,
-			double minValue, String string) {
+			double minValue, double[][] xiaoshu) {
 
 		Object[] params = changeImageToArray(imgPath);
 		double[][] array = (double[][]) params[0];
 		int N = (int) params[1];
 
-		String[][] end = new String[N][N];
-		String[] s = string.split(",");
-
 		double cha = maxValue - minValue;
-
-		System.out.println("guiyi:" + cha);
-		System.out.println("第一个" + array[0][0]);
+		System.out.println("逆归一化之前:" + array[1][1]);
+		System.out.println();
+		System.out.println("guiyi:差=" + cha);
 		for (int i = 0; i < N; i++)
 			for (int j = 0; j < N; j++) {
-				array[i][j] = (array[i][j] * cha) + minValue;
+				array[i][j] = ((array[i][j] + xiaoshu[i][j]) * cha) + minValue;
 			}
-
+		System.out.println("逆归一化成功," + array[1][1]);
 		return array;
 	}
+
 
 	public static void deChaoticEncrypt(double[][] array, String desPath) {
 
@@ -634,7 +610,7 @@ public class ImageUtils {
 		b = 20.0;
 		int E = 100000;
 
-		N = 512;
+		N = array.length;
 
 		beforeDeencrypt = array;
 		afterDeencrypt = new double[N][N];
@@ -643,7 +619,6 @@ public class ImageUtils {
 
 				double value = beforeDeencrypt[i][j];
 				afterDeencrypt[i][j] = value - y0;
-
 				double x = a11 * x0 + a12 * value + a13 * z0 + (b * value) % E;
 				double y = a21 * x0 + a22 * y0 + a23 * z0;
 				double z = a31 * x0 + a32 * value + a33 * z0;

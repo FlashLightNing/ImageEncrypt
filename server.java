@@ -1,5 +1,6 @@
 package bishe;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FileDialog;
 import java.awt.FlowLayout;
@@ -80,74 +81,86 @@ public class server extends Thread {
 		}
 	}
 
-	public boolean receiveMessage(InputStream in) {
+	public String receiveMessage(InputStream in) {
+		String text = null;
 		BufferedReader reader = new BufferedReader(new InputStreamReader(in));
 		try {
-			String text = reader.readLine();
-			if (text.equals("start")) {
-				System.out.println("收到start");
-				return true;
-			}
+			text = reader.readLine();
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
-		return false;
+		return text;
 	}
 
 	public void receiveFile(Socket socket) {
-		byte[] inputByte = null;
-		int length = 0;
-		DataInputStream dis = null;
-		FileOutputStream fos = null;
-		try {
+//		DataInputStream dis = null;
+//		FileOutputStream fos = null;
 			try {
-				dis = new DataInputStream(socket.getInputStream());
-				File f = new File("E:/temp");
-				if (!f.exists()) {
-					f.mkdir();
-				}
 				/*
 				 * 文件存储位置
 				 */
-				int c = 0;
-				System.out.println("等待客户端选择文件");
-				File file = new File("E:/exist.txt");
 
-				long now_time = System.currentTimeMillis();
-
-				while (true) {
-					c++;
-					// long cc =System.currentTimeMillis();
-					// if(cc-now_time ==60000)
-					if (receiveMessage(socket.getInputStream()))
-						break;
+				System.out.println("开始接收数据...");
+				int N = 0;
+				
+				BufferedReader bfr = new BufferedReader(new InputStreamReader(
+						socket.getInputStream()));
+				String start = bfr.readLine();
+				N=Integer.parseInt(start);
+				System.out.println(N);
+				String[][] aa = new String[N + 2][N + 2];
+				int i = 0;
+				int j = 0;
+				double all=(double)(N*N);
+				while (!start.equals("end")) {
+					start = bfr.readLine();
+					aa[i][j] = start;
+					System.out.println("aa[" + i + "," + j + "]=" + start+",接收:"+((i*N+j)/all)*100+"%");
+					j++;
+					if (j == N) {
+						j = 0;
+						i++;
+					}
 				}
+
 				JOptionPane.showConfirmDialog(jframe, "一张图片等待接收...", "图片",
 						JOptionPane.YES_OPTION);
+				String path2 = saveAs();
 
-				String path = saveAs();
-				fos = new FileOutputStream(new File(path));
-				inputByte = new byte[1024];
-				System.out.println("开始接收数据...");
-				int receLenth = 0;
-				while ((length = dis.read(inputByte, 0, inputByte.length)) > 0) {
+				changeArrayToImage(N,aa, path2);
+				System.out.println("完成接收：" + path2 );
+				JOptionPane.showConfirmDialog(jframe, "接收完成,保存地址:"+path2,"提示",JOptionPane.YES_OPTION);
 
-					fos.write(inputByte, 0, length);
-					receLenth += length;
-					fos.flush();
-				}
-				System.out.println("完成接收：" + path + "," + receLenth);
-				file.delete();
-			} finally {
-				if (fos != null)
-					fos.close();
-				if (dis != null)
-					dis.close();
-			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+
+	public void changeArrayToImage(int N,String[][] array, String path)
+			throws IOException {
+		
+		double[][] end = new double[N][N];
+		for (int i = 0; i < N; i++)
+			for (int j = 0; j < N; j++) {
+				end[i][j] = Double.parseDouble(array[i][j]);
+			}
+
+		File file = new File(path);
+		String location = file.getParent().substring(0, 1) + ":/";
+
+		// 混沌解密
+		String after_De_ChaoticEncrypt_ImagePath = location
+				+ "after_De_ChaoticEncrypt_ImagePath.jpg";
+
+		ImageUtils.deChaoticEncrypt(end, after_De_ChaoticEncrypt_ImagePath);
+
+		// 猫脸逆映射之后得到的图片地址
+		// String afterInverseArnoldChangeImagePath = "d:/f.jpg";
+		ImageUtils.inverseArnoldChange(after_De_ChaoticEncrypt_ImagePath, path,
+				5, 15, 20);
+		System.out.println("逆映射成功");
 	}
 
 	public String saveAs() {

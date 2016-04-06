@@ -5,6 +5,7 @@ import java.awt.FileDialog;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -21,6 +22,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
+import javax.imageio.ImageIO;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -42,8 +44,7 @@ public class client extends JFrame {
 	InputStream in = null;
 	OutputStream out = null;
 	private String imgPath = null;
-
-	
+	private int N = 0;
 
 	public static void main(String[] args) {
 		client c = new client();
@@ -57,17 +58,14 @@ public class client extends JFrame {
 			System.out.println("连接上");
 			in = socket.getInputStream();
 			out = socket.getOutputStream();
-			// sendImage(socket);
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		System.out.println("启动");
-		// new Thread(this).start();
 	}
 
-	
 	// @Override
 	// public void run() {
 	// while (true) {
@@ -79,31 +77,86 @@ public class client extends JFrame {
 	// }
 	// }
 
-	public void sendImage(Socket socket, String imgPath) {
+	public double[][] getImageArray(String srcPath) {
+
+		// 判断图像类别,是否为JPEG图像
+		boolean is_Jpeg = false;
+		try {
+			is_Jpeg = ImageUtils.getImageType(srcPath);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		String jpeg_image_path = srcPath;
+
+		File file = new File(srcPath);
+		String location = file.getParent().substring(0, 1) + ":/";
+		String newName = file.getName().split("\\.")[0] + ".jpg";
+		String newPath = location + newName;
+
+		// 如果不是JPEG类别的图像,进行处理
+		if (!is_Jpeg) {
+			System.out.println("非");
+			try {
+				ImageUtils.convertPicture(srcPath, newPath, "JPEG");
+				BufferedImage im = null;
+				try {
+					im = ImageIO.read(new File(newPath));
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				if (N == 0) {
+					N = im.getHeight();
+				}
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			}
+		} else {
+			newPath = srcPath;
+		}
+		System.out.println("是");
+
+		// 灰度图像地址
+		String gray_image_path = location + "gray.jpg";
+
+		ImageUtils.gray(newPath, gray_image_path);
+
+		String after_ArnoldChange_ImagePath = location
+				+ "after_arnoldChange_image_path.jpg";
+
+		double[][] a = ImageUtils.arnoldChange(gray_image_path,
+				after_ArnoldChange_ImagePath, 5, 15, 20);
+
+		// 混沌加密得到的图片路径
+		String after_ChaoticEncrypt_ImagePath = location
+				+ "after_ChaoticEncrypt_ImagePath.jpg";
+
+		double[][] ar = ImageUtils.chaoticEncrypt(a,
+				after_ArnoldChange_ImagePath, after_ChaoticEncrypt_ImagePath);
+
+		return ar;
+	}
+
+	public void sendImage(Socket socket, String imgPath, double[][] array) {
 		int length = 0;
 		double sumL = 0;
-		byte[] sendBytes = null;
 		DataOutputStream dos = null;
 		FileInputStream fis = null;
 		boolean bool = false;
 		try {
-			File file = new File(imgPath); // 要传输的文件路径
-			long l = file.length();
 
-			dos = new DataOutputStream(socket.getOutputStream());
-			fis = new FileInputStream(file);
-			sendBytes = new byte[1024];
-			while ((length = fis.read(sendBytes, 0, sendBytes.length)) > 0) {
-				sumL += length;
-				System.out.println("已传输：" + ((sumL / l) * 100) + "%");
-				dos.write(sendBytes, 0, length);
-				dos.flush();
-			}
-			// 虽然数据类型不同，但JAVA会自动转换成相同数据类型后在做比较
-			if (sumL == l) {
-				System.out.println("长度="+l);
-				bool = true;
-			}
+			double[][] arr = getImageArray(imgPath);
+			System.out.println("得到发送的数组");
+			double all = (double) (N * N);
+			for (int i = 0; i < N; i++)
+				for (int j = 0; j < N; j++) {
+					sendMsg(out, String.valueOf(arr[i][j]));
+					double process = (i * N + j) / all;
+					System.out.println("发送:arr[" + i + "," + j + "]="
+							+ arr[i][j] + "," + (process * 100) + "%");
+				}
+			sendMsg(out, "end");
+
 		} catch (Exception e) {
 			System.out.println("客户端文件传输异常");
 			bool = false;
@@ -119,33 +172,31 @@ public class client extends JFrame {
 			}
 		}
 		System.out.println(bool ? "成功" : "失败");
-		
+
 	}
 
-	
-
-	
-	
-	public String openAs() {
-		String path = null;
+	public Object[] openAs() {
+		String newPath = null;
 		try {
-			// JFrame jf =new JFrame("测试");
 			JTextArea jtext = new JTextArea(10, 10);
 			FileDialog fdopen = new FileDialog(jframe, "打开", FileDialog.LOAD);// 框属性为"LOAD加载"，附于JFrame对象
 			fdopen.setVisible(true);
-			path = fdopen.getDirectory() + fdopen.getFile();
+			String path = fdopen.getDirectory() + fdopen.getFile();
 			
-			File file =new File("E:/exist.txt");
-			if(!file.exists()){
-				file.createNewFile();
-			}
+			File file = new File(path);
+			String location = file.getParent().substring(0, 1) + ":/";
+			String newName = file.getName().split("\\.")[0] + ".jpg";
+			 newPath = location + newName;
 			
+			ImageUtils.convertPicture(path, newPath, "JPEG");
+			BufferedImage image=ImageIO.read(new File(newPath));
+			N=image.getHeight();
+
 		} catch (Exception ess) {
 		}
-		System.out.println(path );
-		return path;
+		System.out.println(newPath);
+		return new Object[] { newPath, N };
 	}
-
 
 	public void sendMsg(OutputStream out, String msg) {
 		msg += "\r\n";
@@ -179,11 +230,16 @@ public class client extends JFrame {
 		jframe.add(sendButton);
 
 		jframe.setVisible(true);
+
+		final double[][] ar = new double[10][10];
 		openButton.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				imgPath = openAs();
+				Object[] params = openAs();
+				imgPath = (String) params[0];
+				N = (int) params[1];
+				System.out.println(N);
 			}
 		});
 
@@ -191,8 +247,8 @@ public class client extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				System.out.println("准备发送");
-				sendMsg(out, "start");
-				sendImage(socket, imgPath);
+				sendMsg(out, String.valueOf(N));
+				sendImage(socket, imgPath, ar);
 				System.out.println("发送路径:" + imgPath);
 			}
 		});
