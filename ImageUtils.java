@@ -1,47 +1,27 @@
 package bishe;
 
-import java.awt.AlphaComposite;
 import java.awt.Color;
-import java.awt.FileDialog;
-import java.awt.Font;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
-import java.awt.Toolkit;
 import java.awt.color.ColorSpace;
 import java.awt.geom.AffineTransform;
 import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.awt.image.ColorConvertOp;
-import java.awt.image.CropImageFilter;
-import java.awt.image.FilteredImageSource;
-import java.awt.image.ImageFilter;
-import java.awt.image.Raster;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 
 import javax.imageio.ImageIO;
-import javax.imageio.stream.FileImageInputStream;
-import javax.imageio.stream.FileImageOutputStream;
 import javax.media.jai.JAI;
 import javax.media.jai.RenderedOp;
-import javax.swing.JFrame;
-import javax.swing.JTextField;
 
 import com.sun.media.jai.codec.ImageCodec;
 import com.sun.media.jai.codec.ImageEncoder;
 import com.sun.media.jai.codec.JPEGEncodeParam;
-import com.sun.org.apache.bcel.internal.generic.NEW;
 
 /**
  * 图片处理工具类：<br>
@@ -51,17 +31,8 @@ import com.sun.org.apache.bcel.internal.generic.NEW;
  */
 public class ImageUtils {
 
-	/**
-	 * 几种常见的图片格式
-	 */
-	public static String IMAGE_TYPE_GIF = "gif";// 图形交换格式
-	public static String IMAGE_TYPE_JPG = "jpg";// 联合照片专家组
-	public static String IMAGE_TYPE_JPEG = "jpeg";// 联合照片专家组
-	public static String IMAGE_TYPE_BMP = "bmp";// 英文Bitmap（位图）的简写，它是Windows操作系统中的标准图像文件格式
-	public static String IMAGE_TYPE_PNG = "png";// 可移植网络图形
-	public static String IMAGE_TYPE_PSD = "psd";// Photoshop的专用格式Photoshop
-
 	public boolean is_send = false;
+	private static String imgType="JPEG";
 
 	/**
 	 * 程序入口：用于测试
@@ -70,34 +41,32 @@ public class ImageUtils {
 	 * @throws IOException
 	 */
 	public static void main(String[] args) throws IOException {
-		// 1-缩放图像：
-		// 方法一：按比例缩放
+
+		String outputPath = "E:/te.jpg";
 
 		// // 2-切割图像：
 		// // 方法一：按指定起点坐标和宽高切割
-		// ImageUtils.cut(path, "e:/abc_cut.jpg", 0, 0, 400, 400);// 测试OK
-		// // 方法二：指定切片的行数和列数
-		// ImageUtils.cut2(path, "e:/", 2, 2);// 测试OK
-		// // 方法三：指定切片的宽度和高度
-		// ImageUtils.cut3(path, "e:/", 300, 300);// 测试OK
-		//
+		ImageUtils.scale2(outputPath, "E:/abc_sc.jpg", true);// 测试OK
 
 		// 4-彩色转黑白：
 		// String path = "E:/original_color_image_1.jpeg";
 		// String path2 = "E:/abc_gray.jpg";
-		String grayImage = "E://lena.tiff";
+		String grayImage = "E:/abc_sc.jpg";
+		// String grayImage = "E://lena.tiff";
 
 		boolean is_Jpeg = getImageType(grayImage);
-		String outputPath = "E:/te.jpg";
+
 		if (!is_Jpeg) {
 			System.out.println("非JPEG转JPEG");
-			convertPicture(grayImage, outputPath, "JPEG");
+			convertPicture(grayImage, outputPath, imgType);
+		} else {
+			outputPath = grayImage;
 		}
 		System.out.println("已为jpeg");
 		// ImageUtils.getGrayPicture(path,path3);
 
-		 String grayImagePath = "E:/b.jpg";
-//		 ImageUtils.gray(path, grayImagePath);
+		String grayImagePath = "E:/b.jpg";
+		// ImageUtils.gray(path, grayImagePath);
 
 		// 猫脸映射之后得到的图片路径
 		String after_ArnoldChange_ImagePath = "E:/d.jpg";
@@ -109,7 +78,8 @@ public class ImageUtils {
 		String after_ChaoticEncrypt_ImagePath = "E:/w.jpg";
 
 		double[][] ar = ImageUtils.chaoticEncrypt(a,
-				after_ArnoldChange_ImagePath, after_ChaoticEncrypt_ImagePath);
+				after_ArnoldChange_ImagePath, after_ChaoticEncrypt_ImagePath,
+				1.5, 1.2, 0.3);
 
 		// double[][] br = ImageUtils.chaoticEncrypt(a,
 		// afterArnoldChangeImagePath, afterChaoticEncryptImagePath);
@@ -126,13 +96,89 @@ public class ImageUtils {
 		// // 混沌解密得到的图片途径
 		String after_De_ChaoticEncrypt_ImagePath = "E:/h.jpg";
 
-		ImageUtils.deChaoticEncrypt(ar, after_De_ChaoticEncrypt_ImagePath);
+		ImageUtils.deChaoticEncrypt(ar, after_De_ChaoticEncrypt_ImagePath, 1.5,
+				1.2, 0.3);
 
 		// 猫脸逆映射之后得到的图片地址
 		String afterInverseArnoldChangeImagePath = "E:/f.jpg";
 		ImageUtils.inverseArnoldChange(after_De_ChaoticEncrypt_ImagePath,
 				afterInverseArnoldChangeImagePath, 5, 15, 20);
 
+	}
+
+	public static int getMaxLenth(int width, int height) {
+		int N = 0;
+		// 取最大的值
+		N = width < height ? width : height;
+		N = N - N % 4;
+		return N;
+	}
+
+	/**
+	 * @param srcImageFile
+	 *            原地址
+	 * @param result
+	 *            切割之后的图片地址，若原图像的大小已经符合要求,则: result=scrImageFile
+	 * @param bb
+	 * @return result
+	 */
+	public final static String scale2(String srcImageFile, String result,
+			boolean bb) {
+		int height = 0;
+		int width = 0;
+		try {
+			double ratio = 0.0; // 缩放比例
+			File f = new File(srcImageFile);
+			BufferedImage bi = ImageIO.read(f);
+			int w = bi.getWidth();
+			int h = bi.getHeight();
+			System.out.println(w);
+			if ((w == h) && (w % 4 == 0)) {
+				System.out.println("符合要求.不用切割");
+				return srcImageFile;
+			} else {
+				int N = getMaxLenth(w, h);
+				System.out.println(N);
+				height = N;
+				width = N;
+			}
+
+			Image itemp = bi.getScaledInstance(width, height, bi.SCALE_SMOOTH);
+			// 计算比例
+			if ((bi.getHeight() > height) || (bi.getWidth() > width)) {
+				if (bi.getHeight() > bi.getWidth()) {
+					ratio = (new Integer(height)).doubleValue()
+							/ bi.getHeight();
+				} else {
+					ratio = (new Integer(width)).doubleValue() / bi.getWidth();
+				}
+				AffineTransformOp op = new AffineTransformOp(
+						AffineTransform.getScaleInstance(ratio, ratio), null);
+				itemp = op.filter(bi, null);
+			}
+			if (bb) {// 补白
+				BufferedImage image = new BufferedImage(width, height,
+						BufferedImage.TYPE_INT_RGB);
+				Graphics2D g = image.createGraphics();
+				g.setColor(Color.white);
+				g.fillRect(0, 0, width, height);
+				if (width == itemp.getWidth(null))
+					g.drawImage(itemp, 0, (height - itemp.getHeight(null)) / 2,
+							itemp.getWidth(null), itemp.getHeight(null),
+							Color.white, null);
+				else
+					g.drawImage(itemp, (width - itemp.getWidth(null)) / 2, 0,
+							itemp.getWidth(null), itemp.getHeight(null),
+							Color.white, null);
+				g.dispose();
+				itemp = image;
+			}
+			ImageIO.write((BufferedImage) itemp, "JPEG", new File(result));
+			System.out.println("切割成功");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return result;
 	}
 
 	/**
@@ -175,15 +221,19 @@ public class ImageUtils {
 
 	/**
 	 * 将任意类型的转为JPEG类型的图片
-	 * 
+	 * 若已经为JPEG图片,则直接返回原地址;否则返回处理后的地址
 	 * @param inputPath
 	 * @param outputPath
 	 * @param type
-	 * @throws FileNotFoundException 
 	 * @throws IOException
 	 */
-	public static void convertPicture(String inputPath, String outputPath,
-			String type) throws FileNotFoundException  {
+	public static String convertPicture(String inputPath, String outputPath,
+			String type) throws IOException {
+
+		boolean is_Jpeg = getImageType(inputPath);
+		if (is_Jpeg) {//若已经为JPEG图片,则不用处理,直接返回
+			return inputPath;
+		}
 
 		RenderedOp src2 = JAI.create("fileload", inputPath);
 		OutputStream os2 = new FileOutputStream(outputPath);
@@ -198,8 +248,9 @@ public class ImageUtils {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+
 		System.out.println("转换成功");
+		return outputPath;
 	}
 
 	/**
@@ -386,20 +437,21 @@ public class ImageUtils {
 	/**
 	 * 将一个矩阵数组转为图像
 	 * 
-	 * @param array
-	 * @param path
+	 * @param array 数组
+	 * @param path 要存放的图片地址
 	 * @throws IOException
 	 */
 	public static void changeArrayToImage(double[][] array, String path,
 			String process) {
 		int N = array.length;
+		System.out.println(process + ":" + N);
 		BufferedImage image = new BufferedImage(N, N,
 				BufferedImage.TYPE_BYTE_GRAY);
 
 		for (int i = 0; i < N; i++)
 			for (int j = 0; j < N; j++) {
 				int gray = (int) (array[i][j] * 255);
-				// double gray =array[i][j];
+				
 				int rgb = new Color(gray, gray, gray).getRGB();
 				image.setRGB(i, j, rgb);
 			}
@@ -412,7 +464,6 @@ public class ImageUtils {
 		System.out.println(process + ":数组转换图片成功,路径:" + path);
 	}
 
-	
 	public static Object[] changeImageToArray(String imgPath) {
 
 		int N = 0;
@@ -420,8 +471,9 @@ public class ImageUtils {
 		int[] rgbArray = null;
 		try {
 			BufferedImage image = ImageIO.read(new File(imgPath));
-
+			
 			N = image.getWidth();
+			System.out.println("第一个:" + N + ",path=" + imgPath);
 			array = new double[N][N];
 			rgbArray = new int[N * N + 2];
 
@@ -431,9 +483,6 @@ public class ImageUtils {
 
 					Color color = new Color(rgbArray[j * N + i]);
 					array[i][j] = color.getRed() / 255.0;
-					if (i == 1 && j == 1) {
-						System.out.println("rgb=" + array[1][1] * 255);
-					}
 				}
 
 		} catch (IOException e) {
@@ -444,14 +493,14 @@ public class ImageUtils {
 	}
 
 	public static double[][] chaoticEncrypt(double[][] arr, String srcPath,
-			String desPath) {
+			String desPath, double x0, double y0, double z0) {
 
 		int N = 0;
 
 		// 加密参数
-		double x0 = 0.5;
-		double y0 = 1.2;
-		double z0 = 0.3;
+		// double x0 = 0.5;
+		// double y0 = 1.2;
+		// double z0 = 0.3;
 
 		double a = 0.0;
 		double b = 0.1;
@@ -475,6 +524,7 @@ public class ImageUtils {
 
 		double maxValue = 10;
 		double minValue = 10;
+		double left0 = 100000;
 
 		Object[] params = changeImageToArray(srcPath);
 
@@ -494,6 +544,8 @@ public class ImageUtils {
 					maxValue = value;
 				if (value < minValue)
 					minValue = value;
+				if (Math.abs(value) < left0)
+					left0 = Math.abs(value);
 
 				double X = A11 * x0 + A12 * value + A13 * z0 + (B * value) % E;
 				double Y = A21 * x0 + A22 * y0 + A23 * z0;
@@ -504,7 +556,8 @@ public class ImageUtils {
 
 			}
 
-		System.out.println("max=" + maxValue + ",min=" + minValue);
+		System.out.println("max=" + maxValue + ",min=" + minValue + ",lef0="
+				+ left0);
 		returnArray = afterChaoticEncrypt;
 
 		// changeArrayToImage(afterChaoticEncrypt, desPath,"混沌加密");
@@ -583,17 +636,17 @@ public class ImageUtils {
 		return array;
 	}
 
-
-	public static void deChaoticEncrypt(double[][] array, String desPath) {
+	public static void deChaoticEncrypt(double[][] array, String desPath,
+			double x0, double y0, double z0) {
 
 		int N = 0;
 
 		double[][] beforeDeencrypt = null;
 		double[][] afterDeencrypt = null;
 
-		double x0 = 0.5;
-		double y0 = 1.2;
-		double z0 = 0.3;
+		// double x0 = 0.5;
+		// double y0 = 1.2;
+		// double z0 = 0.3;
 		// a=0.1;
 		double a = 0.0;
 		double b = 0.1;

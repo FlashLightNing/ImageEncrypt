@@ -1,32 +1,19 @@
 package bishe;
 
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FileDialog;
 import java.awt.FlowLayout;
-import java.awt.Image;
-import java.awt.color.ColorSpace;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.image.BufferedImage;
-import java.awt.image.ColorConvertOp;
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-import javax.imageio.ImageIO;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -34,7 +21,6 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
-import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.plaf.DimensionUIResource;
 
 public class server extends Thread {
@@ -46,9 +32,6 @@ public class server extends Thread {
 	JFrame jframe;
 
 	public static void main(String[] args) {
-		// String path = "G:/matlab/bin/original_color_image_1.jpg";
-		// String path2 = "E:/abc_gray.jpg";
-		// new Main().arnoldChange(path2);
 
 		server ma = new server();
 		ma.systenUI();
@@ -125,18 +108,31 @@ public class server extends Thread {
 					}
 				}
 
-				JOptionPane.showConfirmDialog(jframe, "一张图片等待接收...", "图片",
-						JOptionPane.YES_OPTION);
+				JOptionPane.showMessageDialog(jframe, "一张图片等待接收...");
 				String path2 = saveAs();
 
 				changeArrayToImage(N,aa, path2);
 				System.out.println("完成接收：" + path2 );
-				JOptionPane.showConfirmDialog(jframe, "接收完成,保存地址:"+path2,"提示",JOptionPane.YES_OPTION);
+				JOptionPane.showMessageDialog(jframe, "接收完成,保存地址:"+path2);
 
+				
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
+	
+	public void sendMsgToClient(Socket socket,String msg){
+		msg+="\r\n";
+		try {
+			OutputStream out =socket.getOutputStream();
+			out.write(msg.getBytes());
+			out.flush();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	
 
 	public void changeArrayToImage(int N,String[][] array, String path)
 			throws IOException {
@@ -154,7 +150,7 @@ public class server extends Thread {
 		String after_De_ChaoticEncrypt_ImagePath = location
 				+ "after_De_ChaoticEncrypt_ImagePath.jpg";
 
-		ImageUtils.deChaoticEncrypt(end, after_De_ChaoticEncrypt_ImagePath);
+		ImageUtils.deChaoticEncrypt(end, after_De_ChaoticEncrypt_ImagePath,1.5 ,1.2, 0.3);
 
 		// 猫脸逆映射之后得到的图片地址
 		// String afterInverseArnoldChangeImagePath = "d:/f.jpg";
@@ -222,9 +218,7 @@ public class server extends Thread {
 		sendButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				String msg = "你好";
 				// sendMsg(out, msg);
-				System.out.println("发送成功");
 			}
 		});
 

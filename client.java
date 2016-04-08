@@ -27,6 +27,7 @@ import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.plaf.DimensionUIResource;
@@ -46,6 +47,8 @@ public class client extends JFrame {
 	private String imgPath = null;
 	private int N = 0;
 
+	private Object[] sendParams = null;
+
 	public static void main(String[] args) {
 		client c = new client();
 		c.setClient();
@@ -53,8 +56,10 @@ public class client extends JFrame {
 
 	public void setClient() {
 		systenUI();
+		String ip = JOptionPane.showInputDialog("请输入服务器IP:");
+		System.out.println("服务器IP:" + ip);
 		try {
-			socket = new Socket("localhost", 9090);
+			socket = new Socket(ip, 9090);
 			System.out.println("连接上");
 			in = socket.getInputStream();
 			out = socket.getOutputStream();
@@ -77,49 +82,27 @@ public class client extends JFrame {
 	// }
 	// }
 
-	public double[][] getImageArray(String srcPath) {
+	public double[][] getImageArray(String srcPath) throws IOException {
 
-		// 判断图像类别,是否为JPEG图像
-		boolean is_Jpeg = false;
-		try {
-			is_Jpeg = ImageUtils.getImageType(srcPath);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		String jpeg_image_path = srcPath;
+		// String jpeg_image_path = srcPath;
 
 		File file = new File(srcPath);
+		// 得到盘符
 		String location = file.getParent().substring(0, 1) + ":/";
 		String newName = file.getName().split("\\.")[0] + ".jpg";
+
 		String newPath = location + newName;
 
-		// 如果不是JPEG类别的图像,进行处理
-		if (!is_Jpeg) {
-			System.out.println("非");
-			try {
-				ImageUtils.convertPicture(srcPath, newPath, "JPEG");
-				BufferedImage im = null;
-				try {
-					im = ImageIO.read(new File(newPath));
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				if (N == 0) {
-					N = im.getHeight();
-				}
-			} catch (FileNotFoundException e) {
-				e.printStackTrace();
-			}
-		} else {
-			newPath = srcPath;
-		}
-		System.out.println("是");
+		newPath = ImageUtils.convertPicture(srcPath, newPath, "JPEG");
 
+		String cutImagePath = location + "cut.jpg";
+
+		String result = ImageUtils.scale2(newPath, cutImagePath, true);// 测试OK
+		System.out.println("切割之后地址:" + result);
 		// 灰度图像地址
 		String gray_image_path = location + "gray.jpg";
 
-		ImageUtils.gray(newPath, gray_image_path);
+		ImageUtils.gray(result, gray_image_path);
 
 		String after_ArnoldChange_ImagePath = location
 				+ "after_arnoldChange_image_path.jpg";
@@ -132,14 +115,13 @@ public class client extends JFrame {
 				+ "after_ChaoticEncrypt_ImagePath.jpg";
 
 		double[][] ar = ImageUtils.chaoticEncrypt(a,
-				after_ArnoldChange_ImagePath, after_ChaoticEncrypt_ImagePath);
+				after_ArnoldChange_ImagePath, after_ChaoticEncrypt_ImagePath,
+				1.5, 1.2, 0.3);
 
 		return ar;
 	}
 
 	public void sendImage(Socket socket, String imgPath, double[][] array) {
-		int length = 0;
-		double sumL = 0;
 		DataOutputStream dos = null;
 		FileInputStream fis = null;
 		boolean bool = false;
@@ -182,15 +164,16 @@ public class client extends JFrame {
 			FileDialog fdopen = new FileDialog(jframe, "打开", FileDialog.LOAD);// 框属性为"LOAD加载"，附于JFrame对象
 			fdopen.setVisible(true);
 			String path = fdopen.getDirectory() + fdopen.getFile();
-			
+
+			// 要发送的图片地址
 			File file = new File(path);
 			String location = file.getParent().substring(0, 1) + ":/";
 			String newName = file.getName().split("\\.")[0] + ".jpg";
-			 newPath = location + newName;
-			
+			newPath = location + newName;
+
 			ImageUtils.convertPicture(path, newPath, "JPEG");
-			BufferedImage image=ImageIO.read(new File(newPath));
-			N=image.getHeight();
+			BufferedImage image = ImageIO.read(new File(newPath));
+			N = image.getHeight();
 
 		} catch (Exception ess) {
 		}
@@ -208,6 +191,16 @@ public class client extends JFrame {
 		}
 
 	}
+	
+//	public String receiveFromServer(InputStream inputStream){
+//		BufferedReader br =new BufferedReader(new InputStreamReader(inputStream));
+//		String s=null;
+//		try {
+//			s=br.readLine();
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+//	}
 
 	public void systenUI() {
 		jframe = new JFrame("图片传输");
@@ -236,20 +229,30 @@ public class client extends JFrame {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				Object[] params = openAs();
-				imgPath = (String) params[0];
-				N = (int) params[1];
-				System.out.println(N);
+				sendParams = openAs();
+				// imgPath = (String) params[0];
+				// N = (int) params[1];
+				// System.out.println(N);
 			}
 		});
 
 		sendButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				System.out.println("准备发送");
-				sendMsg(out, String.valueOf(N));
-				sendImage(socket, imgPath, ar);
-				System.out.println("发送路径:" + imgPath);
+				
+				if (sendParams == null) {
+					JOptionPane.showMessageDialog(null, "您还没选择要发送的照片");
+				} else {
+					imgPath = (String) sendParams[0];
+					N = (int) sendParams[1];
+					System.out.println(N);
+
+					System.out.println("准备发送");
+					// 需要发送的数据有:迭代次数,矩阵的a,b值,混沌加密的x,y,z系数
+					sendMsg(out, String.valueOf(N));
+					sendImage(socket, imgPath, ar);
+					System.out.println("发送路径:" + imgPath);
+				}
 			}
 		});
 
